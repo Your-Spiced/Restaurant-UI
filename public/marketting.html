@@ -1,0 +1,819 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Your Spiced — Marketing Broadcast</title>
+
+  <!-- Firebase (same as Orders.html) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <style>
+    :root{
+      --bg0:#0f0b07;
+      --bg1:#170d08;
+      --card:#1a0f0a;
+      --text:#fff3e6;
+      --muted:#d8bfa8;
+
+      --spice:#ff3b2f;
+      --spice2:#ffb11f;
+
+      --border: rgba(255, 200, 150, .18);
+      --shadow: 0 18px 60px rgba(0,0,0,.55);
+      --radius: 18px;
+
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    }
+
+    /* Light theme overrides (same idea as Orders) */
+    html[data-theme="light"]{
+      --bg0:#f6f7fb;
+      --bg1:#ffffff;
+      --card:#ffffff;
+
+      --text:#161616;
+      --muted:#5b6168;
+
+      --border: rgba(0,0,0,.10);
+      --shadow: 0 18px 60px rgba(0,0,0,.12);
+    }
+
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: var(--sans);
+      color: var(--text);
+      min-height:100vh;
+      display:block;
+      padding:0;
+      background:
+        radial-gradient(900px 700px at 15% 15%, rgba(255,59,47,.22), transparent 55%),
+        radial-gradient(900px 700px at 85% 20%, rgba(255,177,31,.16), transparent 60%),
+        linear-gradient(180deg, var(--bg1), var(--bg0));
+      position:relative;
+      overflow-x:hidden;
+    }
+    body::before{
+      content:"";
+      position:fixed;
+      inset:0;
+      background-image: radial-gradient(rgba(255,255,255,.035) 1px, transparent 1px);
+      background-size: 18px 18px;
+      opacity:.45;
+      pointer-events:none;
+      mix-blend-mode: overlay;
+    }
+    html[data-theme="light"] body::before{
+      background-image: radial-gradient(rgba(0,0,0,.06) 1px, transparent 1px);
+      mix-blend-mode: normal;
+      opacity:.35;
+    }
+
+    .nav{
+      position: sticky;
+      top: 0;
+      z-index: 120;
+      padding: 12px 14px;
+      background: rgba(10,6,4,.55);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(10px);
+    }
+    html[data-theme="light"] .nav{
+      background: rgba(255,255,255,.75);
+    }
+
+    .nav-inner{
+      width: min(1250px, 100%);
+      margin: 0 auto;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .nav-left{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .nav-links{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .nav a{
+      color: rgba(255,243,230,.92);
+      text-decoration:none;
+      font-weight:700;
+      font-size:13px;
+      padding:8px 10px;
+      border-radius: 12px;
+      border: 1px solid transparent;
+      transition: filter .15s ease, background .15s ease, border-color .15s ease;
+    }
+    html[data-theme="light"] .nav a{ color: var(--text); }
+    .nav a:hover{
+      background: rgba(255,255,255,.06);
+      border-color: rgba(255, 200, 150, .18);
+      filter: brightness(1.05);
+    }
+    html[data-theme="light"] .nav a:hover{
+      background: rgba(0,0,0,.04);
+      border-color: rgba(0,0,0,.10);
+    }
+    .nav .active{
+      background: linear-gradient(135deg, rgba(255,59,47,.30), rgba(255,177,31,.18));
+      border-color: rgba(255,177,31,.25);
+    }
+
+    .badge{
+      font-family: var(--mono);
+      font-size:12px;
+      border:1px solid rgba(255,255,255,.16);
+      background: rgba(0,0,0,.18);
+      padding:6px 10px;
+      border-radius: 999px;
+      color: rgba(255,255,255,.92);
+      white-space:nowrap;
+    }
+    html[data-theme="light"] .badge{
+      border-color: rgba(0,0,0,.10);
+      background: rgba(0,0,0,.05);
+      color: var(--text);
+    }
+
+    .page{ width: min(1250px, 100%); margin: 0 auto; padding: 18px 14px 28px; }
+
+    .wrap{
+      width: 100%;
+      display:flex;
+      justify-content:center;
+    }
+
+    .card{
+      width: min(760px, 100%);
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(0,0,0,.12));
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    html[data-theme="light"] .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.86));
+    }
+
+    .topbar{ padding:18px 18px 0 18px; }
+
+    .brand{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:14px;
+      flex-wrap:wrap;
+    }
+
+    .brand-left{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      min-width: 260px;
+    }
+
+    .logo-ring{
+      width: 72px;
+      height: 72px;
+      border-radius: 999px;
+      padding: 2px;
+      background: linear-gradient(135deg, rgba(255,59,47,.9), rgba(255,177,31,.9));
+      box-shadow: 0 12px 30px rgba(0,0,0,.38);
+      flex: 0 0 auto;
+      display:grid;
+      place-items:center;
+    }
+
+    .logo-img{
+      width: 68px;
+      height: 68px;
+      border-radius: 999px;
+      object-fit: contain;
+      background: rgba(0,0,0,.18);
+      border: 1px solid rgba(255,255,255,.14);
+      padding: 10px;
+      display:block;
+    }
+    html[data-theme="light"] .logo-img{
+      background: rgba(0,0,0,.04);
+      border-color: rgba(0,0,0,.10);
+    }
+
+    h1{ margin:0; font-size:18px; letter-spacing:.2px; line-height:1.2; }
+    .tagline{ margin:6px 0 0 0; color: var(--muted); font-size:13px; line-height:1.5; }
+
+    .content{ padding: 16px 18px 18px 18px; }
+
+    label{ display:block; margin: 14px 0 8px 0; font-size:13px; color: rgba(255,243,230,.95); }
+    html[data-theme="light"] label{ color: var(--text); }
+    .hint{ margin-top:7px; font-size:12px; color: var(--muted); line-height:1.35; }
+
+    textarea, select{
+      width:100%;
+      color: var(--text);
+      background: rgba(10,6,4,.55);
+      border:1px solid rgba(255, 200, 150, .22);
+      outline:none;
+      border-radius: 14px;
+      padding: 12px 12px;
+      transition: box-shadow .15s ease, border-color .15s ease;
+    }
+
+    /* ✅ ONLY CHANGE: make dropdown visible grey in dark mode */
+    select{
+      background: rgba(255,255,255,.10);
+    }
+    select option{
+      background: #2b2b2b;
+      color: #ffffff;
+    }
+
+    html[data-theme="light"] textarea,
+    html[data-theme="light"] select{
+      background: rgba(0,0,0,.03);
+      border-color: rgba(0,0,0,.10);
+      color: var(--text);
+    }
+    html[data-theme="light"] select option{
+      background:#ffffff;
+      color:#161616;
+    }
+
+    textarea:focus, select:focus{
+      border-color: rgba(255, 177, 31, .55);
+      box-shadow: 0 0 0 4px rgba(255, 59, 47, .12);
+    }
+    textarea{ min-height: 170px; resize: vertical; line-height:1.45; }
+
+    .phonesBox{
+      min-height: 110px;
+      font-family: var(--mono);
+      font-size: 12px;
+      white-space: pre-wrap;
+    }
+
+    .actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      margin-top:14px;
+    }
+
+    button{
+      border:1px solid rgba(255,255,255,.18);
+      background: rgba(0,0,0,.18);
+      color: var(--text);
+      border-radius: 14px;
+      padding: 11px 14px;
+      cursor:pointer;
+      font-weight:700;
+      transition: transform .05s ease, filter .15s ease, background .15s ease;
+    }
+    html[data-theme="light"] button{
+      border-color: rgba(0,0,0,.10);
+      background: rgba(0,0,0,.05);
+      color: var(--text);
+    }
+
+    button:hover{ filter: brightness(1.06); }
+    button:active{ transform: translateY(1px); }
+    button.primary{
+      background: linear-gradient(135deg, rgba(255,59,47,.95), rgba(255,177,31,.92));
+      color: #1b0f0a;
+      text-shadow: 0 1px 0 rgba(255,255,255,.22);
+      border-color: transparent;
+    }
+    button.danger{ border-color: rgba(255, 59, 47, .35); background: rgba(255, 59, 47, .10); }
+
+    .status{
+      margin-top:12px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border:1px solid rgba(255, 200, 150, .18);
+      background: rgba(0,0,0,.16);
+      font-size:13px;
+      white-space: pre-wrap;
+      display:none;
+      line-height:1.35;
+    }
+    html[data-theme="light"] .status{
+      border-color: rgba(0,0,0,.10);
+      background: rgba(0,0,0,.03);
+    }
+    .status.ok{ display:block; border-color: rgba(46, 204, 113, .35); background: rgba(46, 204, 113, .10); }
+    .status.err{ display:block; border-color: rgba(255, 59, 47, .40); background: rgba(255, 59, 47, .10); }
+
+    .stats{
+      margin-top: 12px;
+      border: 1px solid rgba(255, 200, 150, .18);
+      background: rgba(0,0,0,.14);
+      border-radius: 14px;
+      padding: 10px;
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap:10px;
+    }
+    html[data-theme="light"] .stats{
+      border-color: rgba(0,0,0,.10);
+      background: rgba(0,0,0,.03);
+    }
+    @media (max-width: 520px){ .stats{ grid-template-columns: 1fr; } }
+    .stat{
+      border: 1px solid rgba(255, 200, 150, .14);
+      background: rgba(10,6,4,.35);
+      border-radius: 12px;
+      padding: 10px;
+    }
+    html[data-theme="light"] .stat{
+      border-color: rgba(0,0,0,.10);
+      background: rgba(0,0,0,.02);
+    }
+    .stat .label{ margin:0; font-size:12px; color: var(--muted); letter-spacing:.2px; }
+    .stat .value{ margin-top:6px; font-family: var(--mono); font-size:18px; color: rgba(255,243,230,.95); }
+    html[data-theme="light"] .stat .value{ color: var(--text); }
+
+    .pill{
+      display:inline-block;
+      margin-right:6px;
+      margin-top:6px;
+      padding: 5px 9px;
+      border-radius:999px;
+      border:1px solid rgba(255, 200, 150, .20);
+      background: rgba(0,0,0,.16);
+      font-family: var(--mono);
+      font-size:12px;
+      color: rgba(255,243,230,.92);
+    }
+    html[data-theme="light"] .pill{
+      border-color: rgba(0,0,0,.10);
+      background: rgba(0,0,0,.04);
+      color: var(--text);
+    }
+    .invalid{ border-color: rgba(255, 59, 47, .36) !important; background: rgba(255, 59, 47, .10) !important; }
+
+    /* ✅ Orders-style Theme + Logout (same look/feel as Orders.html) */
+    .btn{
+      border:1px solid rgba(255, 200, 150, .18);
+      background: rgba(0,0,0,.18);
+      color: var(--text);
+      border-radius: 14px;
+      padding: 10px 12px;
+      cursor:pointer;
+      font-weight:800;
+      font-size:12px;
+      white-space: nowrap;
+      height: 38px;
+      transition: transform .06s ease, filter .15s ease, background .15s ease;
+    }
+    html[data-theme="light"] .btn{
+      border-color: rgba(0,0,0,.10);
+      background: rgba(0,0,0,.05);
+      color: var(--text);
+    }
+    .btn:hover{ filter: brightness(1.06); }
+    .btn:active{ transform: translateY(1px); }
+    .btn.ghost{ background: transparent; }
+
+    .themeBtn{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      border-radius: 999px;
+      padding: 9px 12px;
+      border: 1px solid rgba(255, 200, 150, .18);
+      background: rgba(0,0,0,.18);
+      color: var(--text);
+      cursor:pointer;
+      font-weight:900;
+      font-size:12px;
+      height: 38px;
+      transition: transform .06s ease, filter .15s ease;
+    }
+    html[data-theme="light"] .themeBtn{
+      border-color: rgba(0,0,0,.10);
+      background: rgba(0,0,0,.05);
+      color: var(--text);
+    }
+    .themeBtn:hover{ filter: brightness(1.06); }
+    .themeBtn:active{ transform: translateY(1px); }
+
+    .themeIcon{
+      width: 18px; height: 18px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, rgba(255,59,47,.85), rgba(255,177,31,.85));
+      box-shadow: 0 10px 22px rgba(0,0,0,.18);
+    }
+  </style>
+</head>
+
+<body>
+  <nav class="nav">
+    <div class="nav-inner">
+      <div class="nav-left">
+        <span class="badge">Restaurant Ops Panel</span>
+        <span class="badge" id="navDate"></span>
+      </div>
+      <div class="nav-links">
+        <a class="active" href="marketting.html">Marketting</a>
+        <a href="orders.html">Orders</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="page">
+    <div class="wrap">
+      <section class="card">
+        <div class="topbar">
+          <div class="brand">
+            <!-- ✅ LEFT SIDE (Logo + Title) -->
+            <div class="brand-left">
+              <div class="logo-ring">
+                <img class="logo-img" src="logo.png" alt="Your Spiced logo" />
+              </div>
+              <div>
+                <h1>Your Spiced — Marketing</h1>
+                <p class="tagline">Send today’s menu, offers, and new deals to customers in one click.</p>
+              </div>
+            </div>
+
+            <!-- ✅ RIGHT SIDE (Theme + Logout + Pill) EXACT like Orders -->
+            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+              <button class="themeBtn" id="themeToggle" title="Toggle theme">
+                <span class="themeIcon" aria-hidden="true"></span>
+                <span id="themeLabel">Dark</span>
+              </button>
+
+              <button class="btn ghost" id="logoutBtn" type="button" title="Logout">
+                Logout
+              </button>
+
+              <span class="badge" id="headerPill">Ready</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="content">
+          <label for="customerFilter">Customers filter (from Orders data)</label>
+          <select id="customerFilter">
+            <option value="all" selected>All customers</option>
+            <option value="today">Today</option>
+            <option value="7d">Last 7 days</option>
+            <option value="30d">Last 30 days</option>
+          </select>
+          <div class="hint" id="sheetHint">Waiting for orders data…</div>
+
+          <label for="phonesField">Selected customer phone numbers</label>
+          <textarea id="phonesField" class="phonesBox" readonly placeholder="Select a filter to show phone numbers here…"></textarea>
+
+          <div class="stats" aria-label="Recipient stats">
+            <div class="stat">
+              <p class="label">Recipients</p>
+              <div class="value" id="recipientsCount">0</div>
+            </div>
+            <div class="stat">
+              <p class="label">Valid</p>
+              <div class="value" id="validCount">0</div>
+            </div>
+            <div class="stat">
+              <p class="label">Invalid</p>
+              <div class="value" id="invalidCount">0</div>
+            </div>
+          </div>
+
+          <div id="invalidPills" class="hint"></div>
+
+          <!-- ✅ SMS ONLY (no dropdown) -->
+          <label for="message">SMS Message</label>
+          <textarea id="message" placeholder="New Deal: Large pizza + 2 drinks for £10 (Today 5pm–9pm)" spellcheck="true"></textarea>
+          <div class="hint">SMS only. (Channel fixed to SMS)</div>
+
+          <div class="actions">
+            <button class="primary" id="sendBtn">Send Deal</button>
+            <button class="danger" id="clearBtn" type="button">Clear</button>
+          </div>
+
+          <div id="status" class="status"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    // ✅ show today's date in navbar
+    document.getElementById("navDate").textContent = new Date().toISOString().slice(0,10);
+
+    // ---------------------------
+    // ✅ Theme (light / dark) — EXACT like Orders.html
+    // ---------------------------
+    const THEME_KEY = "ops_theme";
+    function applyTheme(theme) {
+      const t = (theme === "light") ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", t);
+      localStorage.setItem(THEME_KEY, t);
+      document.getElementById("themeLabel").textContent = (t === "light") ? "Light" : "Dark";
+    }
+    (function initTheme(){
+      const saved = localStorage.getItem(THEME_KEY);
+      applyTheme(saved || "dark");
+    })();
+    document.getElementById("themeToggle").addEventListener("click", () => {
+      const current = document.documentElement.getAttribute("data-theme") || "dark";
+      applyTheme(current === "dark" ? "light" : "dark");
+    });
+
+    // ✅ Logout handler (server-side session)
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+      try {
+        await fetch("/api/logout", { method: "POST" });
+      } finally {
+        window.location.href = "/login";
+      }
+    });
+
+    // Firebase (same as Orders.html)
+    const firebaseConfig = { databaseURL: "https://order-sheet-3578a-default-rtdb.firebaseio.com/" };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // Send endpoint (backend)
+    const API_SEND_URL = "/api/send-deal";
+
+    // Sheet state
+    let SHEET_ROWS = [];
+    let SHEET_UPDATED_AT = null;
+
+    // Filter result state
+    let loadedPhonesRaw = [];
+
+    const $ = (id) => document.getElementById(id);
+
+    function safeText(x) { return (x === null || x === undefined) ? "" : String(x); }
+
+    function setStatus(kind, text) {
+      const el = $("status");
+      if (!el) return;
+      el.className = "status " + (kind || "");
+      el.textContent = text || "";
+      el.style.display = text ? "block" : "none";
+    }
+
+    function normalizePhone(input) {
+      return safeText(input).trim().replace(/[()\-\s]/g, "");
+    }
+
+    function isProbablyPhoneE164(s) {
+      const t = normalizePhone(s);
+      return /^(\+?\d{8,15})$/.test(t);
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function buildIndexMap(headerRow) {
+      const header = (headerRow || []).map(h => safeText(h).trim().toLowerCase());
+      const idx = {};
+      header.forEach((h, i) => { if (h) idx[h] = i; });
+      return idx;
+    }
+
+    function tryParseDateMs(value) {
+      const raw = safeText(value).trim();
+      if (!raw) return NaN;
+
+      if (/^\d{10,13}$/.test(raw)) {
+        const n = Number(raw);
+        if (!Number.isFinite(n)) return NaN;
+        return raw.length === 10 ? (n * 1000) : n;
+      }
+
+      let ms = Date.parse(raw);
+      if (Number.isFinite(ms)) return ms;
+
+      if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}(:\d{2})?/.test(raw)) {
+        ms = Date.parse(raw.replace(" ", "T"));
+        if (Number.isFinite(ms)) return ms;
+      }
+
+      const m = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+      if (m) {
+        const a = Number(m[1]), b = Number(m[2]), y = Number(m[3]);
+        const hh = Number(m[4] || 0), mm = Number(m[5] || 0), ss = Number(m[6] || 0);
+
+        const d1 = new Date(y, b - 1, a, hh, mm, ss).getTime();
+        if (Number.isFinite(d1)) return d1;
+
+        const d2 = new Date(y, a - 1, b, hh, mm, ss).getTime();
+        if (Number.isFinite(d2)) return d2;
+      }
+
+      return NaN;
+    }
+
+    function minTimeForRange(rangeKey) {
+      const now = new Date();
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      if (rangeKey === "today") return startOfToday;
+      if (rangeKey === "7d") return Date.now() - 7 * 24 * 60 * 60 * 1000;
+      if (rangeKey === "30d") return Date.now() - 30 * 24 * 60 * 60 * 1000;
+      return null; // all
+    }
+
+    function extractPhonesFromSheet(rangeKey) {
+      if (!Array.isArray(SHEET_ROWS) || SHEET_ROWS.length < 2) return [];
+
+      const idx = buildIndexMap(SHEET_ROWS[0]);
+      const phoneIndex = idx["customer_phone"];
+      const confirmedIndex = idx["confirmed_at"];
+
+      if (phoneIndex === undefined) {
+        throw new Error('Column "customer_phone" not found in liveSheet header row.');
+      }
+
+      const minTime = minTimeForRange(rangeKey);
+      const phones = [];
+
+      for (let r = 1; r < SHEET_ROWS.length; r++) {
+        const row = SHEET_ROWS[r] || [];
+
+        if (minTime) {
+          if (confirmedIndex === undefined) continue;
+          const ms = tryParseDateMs(row[confirmedIndex]);
+          if (!Number.isFinite(ms) || ms < minTime) continue;
+        }
+
+        const phone = row[phoneIndex];
+        if (safeText(phone).trim()) phones.push(phone);
+      }
+
+      return phones;
+    }
+
+    function applyFilterAndShow() {
+      try {
+        const rangeKey = $("customerFilter").value || "all";
+        loadedPhonesRaw = extractPhonesFromSheet(rangeKey);
+        setStatus("", "");
+      } catch (e) {
+        loadedPhonesRaw = [];
+        setStatus("err", String(e?.message || e));
+      }
+
+      updateUI();
+    }
+
+    function buildRecipientsFromLoadedPhones() {
+      const normalized = loadedPhonesRaw.map(normalizePhone).filter(Boolean);
+      const valid = [];
+      const invalid = [];
+
+      normalized.forEach((n, i) => {
+        const original = loadedPhonesRaw[i];
+        if (isProbablyPhoneE164(n)) valid.push(n.startsWith("+") ? n : "+" + n);
+        else invalid.push(safeText(original));
+      });
+
+      const dedupedValid = Array.from(new Set(valid));
+      return { rawCount: loadedPhonesRaw.length, valid: dedupedValid, invalid };
+    }
+
+    function buildPayload() {
+      const message = (($("message")?.value) || "").trim();
+      const { valid, invalid, rawCount } = buildRecipientsFromLoadedPhones();
+
+      // ✅ SMS ONLY
+      const channel = "sms";
+
+      return { payload: { to: valid, message, channel }, valid, invalid, rawCount };
+    }
+
+    function updateUI() {
+      const { valid, invalid, rawCount } = buildPayload();
+
+      $("recipientsCount").textContent = String(rawCount);
+      $("validCount").textContent = String(valid.length);
+      $("invalidCount").textContent = String(invalid.length);
+
+      $("phonesField").value = valid.join(", ");
+
+      const hint = $("sheetHint");
+      hint.textContent = SHEET_UPDATED_AT
+        ? `Orders data updated: ${new Date(SHEET_UPDATED_AT).toLocaleString()}`
+        : `Orders data connected.`;
+
+      const invalidWrap = $("invalidPills");
+      if (invalid.length) {
+        const shown = invalid.slice(0, 25);
+        const more = invalid.length > shown.length ? ` <span class="pill">+${invalid.length - shown.length} more</span>` : "";
+        invalidWrap.innerHTML =
+          `<div style="margin-top:10px;color:rgba(255,243,230,.95);">Invalid entries:</div>` +
+          shown.map(x => `<span class="pill invalid">${escapeHtml(x)}</span>`).join(" ") + more;
+      } else {
+        invalidWrap.innerHTML = "";
+      }
+    }
+
+    async function sendNow() {
+      const { payload, valid, invalid } = buildPayload();
+
+      if (!payload.message) return setStatus("err", "Message is required.");
+      if (!valid.length) return setStatus("err", "No valid phone numbers in this filter.");
+      if (invalid.length) return setStatus("err", "Some customer numbers are invalid. Fix them in the sheet first.");
+
+      $("sendBtn").disabled = true;
+      $("sendBtn").textContent = "Sending...";
+
+      try {
+        const res = await fetch(API_SEND_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const contentType = res.headers.get("content-type") || "";
+        const body = contentType.includes("application/json") ? await res.json() : await res.text();
+        const pretty = (x) => typeof x === "string" ? x : JSON.stringify(x, null, 2);
+
+        if (!res.ok) {
+          setStatus("err", `Send failed (HTTP ${res.status}).\n${pretty(body)}`);
+          return;
+        }
+
+        if (body && typeof body === "object") {
+          const sent = Number(body.sent || 0);
+          const failed = Number(body.failed || 0);
+
+          if (sent === 0 && failed > 0) {
+            setStatus("err", `No messages were sent.\n\nDetails:\n${pretty(body)}`);
+            return;
+          }
+
+          if (sent > 0 && failed > 0) {
+            setStatus("err", `Partially sent.\nSent: ${sent}\nFailed: ${failed}\n\nDetails:\n${pretty(body)}`);
+            return;
+          }
+
+          setStatus("ok", `Sent successfully.\nSent: ${sent}\n\nDetails:\n${pretty(body)}`);
+          return;
+        }
+
+        setStatus("ok", "Sent successfully.\n" + pretty(body));
+      } catch (e) {
+        setStatus("err", "Network/JS error:\n" + (e?.message || String(e)));
+      } finally {
+        $("sendBtn").disabled = false;
+        $("sendBtn").textContent = "Send Deal";
+      }
+    }
+
+    // Events
+    $("customerFilter").addEventListener("change", () => {
+      applyFilterAndShow();
+    });
+
+    document.addEventListener("input", (e) => {
+      if (e.target && e.target.id === "message") {
+        setStatus("", "");
+        updateUI();
+      }
+    });
+
+    $("sendBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      setStatus("", "");
+      updateUI();
+      sendNow();
+    });
+
+    $("clearBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      loadedPhonesRaw = [];
+      $("phonesField").value = "";
+      if ($("message")) $("message").value = "";
+      setStatus("", "");
+      updateUI();
+    });
+
+    // Firebase subscription (liveSheet)
+    db.ref("liveSheet").on("value", (snap) => {
+      const data = snap.val();
+      if (!data) return;
+
+      SHEET_ROWS = Array.isArray(data.rows) ? data.rows : [];
+      SHEET_UPDATED_AT = data.updatedAt || null;
+
+      applyFilterAndShow();
+    });
+
+    // Init
+    updateUI();
+  </script>
+</body>
+</html>

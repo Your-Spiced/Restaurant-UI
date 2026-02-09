@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Login — Restaurant Ops Panel</title>
+  <style>
+    :root{
+      --bg0:#0f0b07; --bg1:#170d08;
+      --text:#fff3e6; --muted:#d8bfa8;
+      --border: rgba(255, 200, 150, .18);
+      --shadow: 0 18px 60px rgba(0,0,0,.55);
+      --radius: 18px;
+      --spice:#ff3b2f; --spice2:#ffb11f;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: var(--sans);
+      color: var(--text);
+      min-height:100vh;
+      display:grid;
+      place-items:center;
+      padding:18px;
+      background:
+        radial-gradient(900px 700px at 15% 15%, rgba(255,59,47,.22), transparent 55%),
+        radial-gradient(900px 700px at 85% 20%, rgba(255,177,31,.16), transparent 60%),
+        linear-gradient(180deg, var(--bg1), var(--bg0));
+    }
+    .card{
+      width:min(420px, 96vw);
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(0,0,0,.12));
+      box-shadow: var(--shadow);
+      padding: 16px;
+    }
+    h1{ margin: 0 0 6px 0; font-size: 18px; }
+    .hint{ color: var(--muted); font-size: 13px; margin-bottom: 12px; }
+    label{ display:block; font-size:12px; color: var(--muted); margin: 10px 0 6px; }
+    input{
+      width:100%;
+      height:42px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 200, 150, .22);
+      background: rgba(10,6,4,.55);
+      color: var(--text);
+      padding: 0 12px;
+      outline:none;
+    }
+    input:focus{
+      border-color: rgba(255, 177, 31, .55);
+      box-shadow: 0 0 0 4px rgba(255, 59, 47, .12);
+    }
+    button{
+      margin-top: 12px;
+      width:100%;
+      height: 42px;
+      border-radius: 14px;
+      border:1px solid rgba(255,255,255,.18);
+      background: linear-gradient(135deg, rgba(255,59,47,.95), rgba(255,177,31,.92));
+      color: #1b0f0a;
+      font-weight: 900;
+      cursor:pointer;
+    }
+    .err{
+      display:none;
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border:1px solid rgba(255,59,47,.40);
+      background: rgba(255, 59, 47, .10);
+      white-space: pre-wrap;
+      font-size: 13px;
+    }
+    .err.show{ display:block; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Restaurant Ops Panel</h1>
+    <div class="hint">Sign in to continue.</div>
+
+    <form id="loginForm">
+      <label for="user">Login ID</label>
+      <input id="user" name="user" autocomplete="username" required />
+
+      <label for="pass">Password</label>
+      <input id="pass" name="pass" type="password" autocomplete="current-password" required />
+
+      <button type="submit">Sign in</button>
+      <div id="err" class="err"></div>
+    </form>
+  </div>
+
+  <script>
+    const err = document.getElementById("err");
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      err.classList.remove("show");
+      err.textContent = "";
+
+      const user = document.getElementById("user").value.trim();
+      const pass = document.getElementById("pass").value.trim();
+
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user, pass })
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        err.textContent = body.error || `Login failed (HTTP ${res.status})`;
+        err.classList.add("show");
+        return;
+      }
+
+      // Success -> go to orders
+      window.location.href = "/orders.html";
+    });
+  </script>
+</body>
+</html>

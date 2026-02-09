@@ -1,0 +1,1310 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Your Spiced — Orders</title>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <style>
+    :root{
+      /* Dark theme (default) */
+      --bg0:#0f0b07;
+      --bg1:#170d08;
+      --cardA: rgba(255,255,255,.05);
+      --cardB: rgba(0,0,0,.12);
+      --cardSolid: rgba(10,6,4,.55);
+
+      --text:#fff3e6;
+      --muted:#d8bfa8;
+
+      --spice:#ff3b2f;
+      --spice2:#ffb11f;
+
+      --border: rgba(255, 200, 150, .18);
+      --shadow: 0 18px 60px rgba(0,0,0,.55);
+      --radius: 18px;
+
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+
+      --topbar-h: 64px;
+
+      --navBg: rgba(10,6,4,.55);
+      --gridDot: rgba(255,255,255,.035);
+      --theadBg: #0b1220;
+      --rowEven: rgba(10,6,4,.44);
+      --rowHover: rgba(255,255,255,.04);
+    }
+
+    /* Light theme overrides */
+    html[data-theme="light"]{
+      --bg0:#f6f7fb;
+      --bg1:#ffffff;
+      --cardA: rgba(0,0,0,.03);
+      --cardB: rgba(0,0,0,.06);
+      --cardSolid: rgba(255,255,255,.82);
+
+      --text:#161616;
+      --muted:#5b6168;
+
+      --border: rgba(0,0,0,.10);
+      --shadow: 0 18px 60px rgba(0,0,0,.12);
+
+      --navBg: rgba(255,255,255,.75);
+      --gridDot: rgba(0,0,0,.06);
+      --theadBg: #0f172a;
+      --rowEven: rgba(0,0,0,.02);
+      --rowHover: rgba(0,0,0,.03);
+    }
+
+    *{ box-sizing:border-box; }
+    html, body{ height:100%; }
+    body{
+      margin:0;
+      font-family: var(--sans);
+      color: var(--text);
+      background:
+        radial-gradient(900px 700px at 15% 15%, rgba(255,59,47,.14), transparent 55%),
+        radial-gradient(900px 700px at 85% 20%, rgba(255,177,31,.10), transparent 60%),
+        linear-gradient(180deg, var(--bg1), var(--bg0));
+      overflow-x:hidden;
+    }
+    body::before{
+      content:"";
+      position:fixed;
+      inset:0;
+      background-image: radial-gradient(var(--gridDot) 1px, transparent 1px);
+      background-size: 18px 18px;
+      opacity:.55;
+      pointer-events:none;
+      mix-blend-mode: overlay;
+    }
+
+    /* Top navigation */
+    .nav{
+      position: sticky;
+      top: 0;
+      z-index: 120;
+      padding: 12px 14px;
+      background: var(--navBg);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(10px);
+    }
+    .nav-inner{
+      width: min(1250px, 100%);
+      margin: 0 auto;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+
+    .nav-left{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .nav-links{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .nav a{
+      color: color-mix(in oklab, var(--text) 92%, transparent);
+      text-decoration:none;
+      font-weight:700;
+      font-size:13px;
+      padding:8px 10px;
+      border-radius: 12px;
+      border: 1px solid transparent;
+      transition: filter .15s ease, background .15s ease, border-color .15s ease;
+    }
+    .nav a:hover{
+      background: rgba(255,255,255,.08);
+      border-color: var(--border);
+      filter: brightness(1.05);
+    }
+    html[data-theme="light"] .nav a:hover{
+      background: rgba(0,0,0,.05);
+    }
+    .nav .active{
+      background: linear-gradient(135deg, rgba(255,59,47,.22), rgba(255,177,31,.14));
+      border-color: color-mix(in oklab, var(--spice2) 30%, transparent);
+    }
+
+    .badge{
+      font-family: var(--mono);
+      font-size:12px;
+      border:1px solid color-mix(in oklab, var(--border) 90%, transparent);
+      background: color-mix(in oklab, var(--cardSolid) 55%, transparent);
+      padding:6px 10px;
+      border-radius: 999px;
+      color: color-mix(in oklab, var(--text) 92%, transparent);
+      white-space:nowrap;
+    }
+
+    .wrap{ width: 100%; margin: 0; padding: 0; position:relative; z-index:1; }
+    .container{ width: min(1250px, 100%); margin: 0 auto; padding: 0 16px; }
+
+    header{
+      height: var(--topbar-h);
+      display:flex;
+      align-items:center;
+      position: sticky;
+      top: 54px;
+      z-index: 110;
+      margin-top: 10px;
+    }
+    .topbar{
+      width:100%;
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, var(--cardA), var(--cardB));
+      box-shadow: var(--shadow);
+      padding: 12px 14px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+
+    .brand-left{ display:flex; align-items:center; gap:12px; min-width: 240px; }
+    .logo-ring{
+      width: 46px; height: 46px; border-radius: 999px; padding: 2px;
+      background: linear-gradient(135deg, rgba(255,59,47,.9), rgba(255,177,31,.9));
+      box-shadow: 0 12px 30px rgba(0,0,0,.20);
+      display:grid; place-items:center;
+      flex:0 0 auto;
+    }
+    .logo-img{
+      width: 42px; height: 42px; border-radius: 999px;
+      object-fit: contain;
+      background: color-mix(in oklab, var(--cardSolid) 60%, transparent);
+      border: 1px solid var(--border);
+      padding: 6px;
+      display:block;
+    }
+    header h1{ margin:0; font-size:15px; letter-spacing:.2px; }
+    .tagline{ margin:4px 0 0 0; color: var(--muted); font-size:12px; }
+
+    main{ padding: 12px 0 22px; }
+
+    .error{
+      display:none;
+      border:1px solid rgba(255,59,47,.40);
+      background: rgba(255, 59, 47, .10);
+      color: color-mix(in oklab, var(--text) 95%, transparent);
+      padding:10px 12px;
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      margin-bottom: 10px;
+      white-space: pre-wrap;
+    }
+
+    .toolbar{
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, var(--cardA), var(--cardB));
+      box-shadow: var(--shadow);
+      padding: 10px 12px;
+      display:flex;
+      gap:10px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: calc(54px + var(--topbar-h) + 12px);
+      z-index: 90;
+      margin-bottom: 12px;
+    }
+
+    .left{ display:flex; gap:12px; align-items:center; flex-wrap: wrap; }
+
+    .dot{ width:9px;height:9px;border-radius:50%; background:#7c6a5e;
+      box-shadow: 0 0 0 3px rgba(216,191,168,.18);
+    }
+    .dot.live{ background:#22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,.22); }
+    .dot.warn{ background:#f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,.20); }
+
+    .badge2{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      border:1px solid var(--border);
+      background: color-mix(in oklab, var(--cardSolid) 70%, transparent);
+      padding:7px 10px;
+      border-radius:999px;
+      font-size:12px;
+      color: color-mix(in oklab, var(--text) 90%, transparent);
+      white-space: nowrap;
+    }
+
+    .meta{ font-size:12px; color: var(--muted); line-height: 1.25; white-space: nowrap; }
+    .meta strong{ color: color-mix(in oklab, var(--text) 95%, transparent); }
+    .muted{ color: var(--muted); }
+
+    .controls{ display:flex; gap:10px; align-items:center; justify-content:flex-end; flex-wrap: wrap; }
+
+    .field{
+      display:flex; align-items:center; gap:8px;
+      background: color-mix(in oklab, var(--cardSolid) 70%, transparent);
+      border:1px solid var(--border);
+      padding: 8px 10px;
+      border-radius: 14px;
+      height: 38px;
+    }
+    .field label{ font-size:12px; color: var(--muted); white-space: nowrap; }
+    .field select, .field input{
+      border:none; outline:none;
+      font-size: 13px;
+      color: var(--text);
+      background: transparent;
+      min-width: 110px;
+    }
+    .field input{ width: 110px; }
+
+    /* ✅ ONLY CHANGE: make ALL dropdowns (select) grey in dark mode so visible */
+    .field select{
+      background: rgba(255,255,255,.12);
+      padding: 6px 8px;
+      border-radius: 10px;
+    }
+    .field select option{
+      background: #2b2b2b;
+      color: #ffffff;
+    }
+    html[data-theme="light"] .field select{
+      background: rgba(0,0,0,.04);
+    }
+    html[data-theme="light"] .field select option{
+      background: #ffffff;
+      color: #161616;
+    }
+
+    .search{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      background: color-mix(in oklab, var(--cardSolid) 70%, transparent);
+      border:1px solid var(--border);
+      padding: 8px 10px;
+      border-radius: 999px;
+      width: min(420px, 70vw);
+      height: 38px;
+    }
+    .search input{ border:none; outline:none; width:100%; font-size: 13px; color: var(--text); background: transparent; }
+    .search span{ color: var(--muted); font-size:12px; white-space: nowrap; }
+
+    .btn{
+      border:1px solid var(--border);
+      background: color-mix(in oklab, var(--cardSolid) 55%, transparent);
+      color: var(--text);
+      border-radius: 14px;
+      padding: 10px 12px;
+      cursor:pointer;
+      font-weight:800;
+      font-size:12px;
+      white-space: nowrap;
+      height: 38px;
+      transition: transform .06s ease, filter .15s ease, background .15s ease;
+    }
+    .btn:hover{ filter: brightness(1.06); }
+    .btn:active{ transform: translateY(1px); }
+    .btn.primary{
+      background: linear-gradient(135deg, rgba(255,59,47,.95), rgba(255,177,31,.92));
+      color: #1b0f0a;
+      text-shadow: 0 1px 0 rgba(255,255,255,.22);
+      border-color: rgba(255,177,31,.35);
+    }
+    .btn.ghost{
+      background: transparent;
+    }
+
+    /* Theme toggle button */
+    .themeBtn{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      border-radius: 999px;
+      padding: 9px 12px;
+      border: 1px solid color-mix(in oklab, var(--border) 90%, transparent);
+      background: linear-gradient(180deg, color-mix(in oklab, var(--cardSolid) 60%, transparent), rgba(0,0,0,.04));
+      color: var(--text);
+      cursor:pointer;
+      font-weight:900;
+      font-size:12px;
+      height: 38px;
+      transition: transform .06s ease, filter .15s ease;
+    }
+    .themeBtn:hover{ filter: brightness(1.06); }
+    .themeBtn:active{ transform: translateY(1px); }
+    .themeIcon{
+      width: 18px; height: 18px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, rgba(255,59,47,.85), rgba(255,177,31,.85));
+      box-shadow: 0 10px 22px rgba(0,0,0,.18);
+    }
+
+    .card{
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, var(--cardA), var(--cardB));
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      width: 100%;
+    }
+
+    .tableWrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; position:relative;  }
+    .tableFull{ width: 100%; padding: 0 16px 18px; }
+
+    table{ width:100%; min-width: 2100px; border-collapse: separate; border-spacing:0; font-size: 13px; }
+
+    thead th{
+      background: var(--theadBg);
+      color:#fff;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      font-size: 11px;
+      padding: 12px 10px;
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      text-align:left;
+      white-space: nowrap;
+      border-bottom: 1px solid rgba(255,255,255,.10);
+    }
+
+    tbody td{
+      padding: 12px 10px;
+      border-bottom: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+      vertical-align: top;
+      background: var(--cardSolid);
+    }
+    tbody tr:nth-child(even) td{ background: var(--rowEven); }
+    tbody tr:hover td{ background: var(--rowHover); }
+
+    tfoot td{
+      padding: 12px 10px;
+      background: color-mix(in oklab, var(--cardSolid) 75%, transparent);
+      border-top: 1px solid var(--border);
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .col-orderid{ width: 140px; }
+    .col-call{ width: 250px; }
+    .col-time{ width: 190px; white-space: nowrap; }
+    .col-customer{ width: 170px; }
+    .col-phone{ width: 150px; font-family: var(--mono); white-space: nowrap; }
+    .col-type{ width: 110px; text-transform: capitalize; }
+    .col-payment{ width: 160px; }
+    .col-total{ width: 120px; white-space: nowrap; font-weight: 900; }
+    .col-items{ width: 560px; }
+    .col-address{ width: 360px; }
+    .col-print{ width: 180px; }
+    .col-recording{ width: 340px; }
+
+    .callid{
+      font-family: var(--mono);
+      font-size: 12px;
+      color: color-mix(in oklab, var(--text) 95%, transparent);
+      background: color-mix(in oklab, var(--cardSolid) 75%, transparent);
+      border:1px solid var(--border);
+      padding: 6px 8px;
+      border-radius: 10px;
+      display:inline-block;
+      max-width: 100%;
+      word-break: break-all;
+    }
+    .pill{
+      font-family: var(--mono);
+      font-size: 12px;
+      color: color-mix(in oklab, var(--text) 92%, transparent);
+      background: color-mix(in oklab, var(--cardSolid) 70%, transparent);
+      border:1px solid var(--border);
+      padding: 6px 8px;
+      border-radius: 999px;
+      display:inline-block;
+      max-width: 100%;
+      word-break: break-word;
+    }
+
+    .chip{
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(255,177,31,.10);
+      color: color-mix(in oklab, var(--text) 92%, transparent);
+      white-space: nowrap;
+      display:inline-block;
+      font-weight: 800;
+    }
+
+    .money{ font-family: var(--mono); font-weight: 950; white-space: nowrap; color: color-mix(in oklab, var(--text) 95%, transparent); }
+
+    .addressBox{
+      border: 1px solid var(--border);
+      background: color-mix(in oklab, var(--cardSolid) 70%, transparent);
+      border-radius: 12px;
+      padding: 8px 10px;
+      color: color-mix(in oklab, var(--text) 86%, transparent);
+      max-width: 360px;
+      white-space: normal;
+    }
+
+    .recordingCell{ min-width: 340px; }
+    .recMeta{ color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+    audio{ width: 100%; max-width: 320px; display:block; margin: 6px 0 0; filter: saturate(1.05); }
+
+    details.itemsDetails{
+      border: 1px solid var(--border);
+      background: color-mix(in oklab, var(--cardSolid) 70%, transparent);
+      border-radius: 12px;
+      padding: 8px 10px;
+      max-width: 560px;
+    }
+    details.itemsDetails > summary{
+      cursor: pointer;
+      list-style: none;
+      display:flex;
+      align-items:center;
+      justify-content: space-between;
+      gap: 12px;
+      font-weight: 950;
+      color: color-mix(in oklab, var(--text) 95%, transparent);
+    }
+    details.itemsDetails > summary::-webkit-details-marker{ display:none; }
+    .itemsHint{ font-weight: 600; color: var(--muted); font-size: 12px; margin-top: 2px; }
+    .itemsList{ margin-top: 10px; display:flex; flex-direction: column; gap: 8px; }
+    .itemRow{
+      border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+      background: color-mix(in oklab, var(--cardSolid) 75%, transparent);
+      border-radius: 12px;
+      padding: 8px 10px;
+    }
+    .itemTop{ display:flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+    .itemName{ font-weight: 950; color: color-mix(in oklab, var(--text) 95%, transparent); }
+    .itemMeta{ color: var(--muted); font-size: 12px; margin-top: 4px; }
+
+    .miniStatus{
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+  </style>
+</head>
+
+<body>
+  <nav class="nav">
+    <div class="nav-inner">
+      <div class="nav-left">
+        <span class="badge">Restaurant Ops Panel</span>
+        <span class="badge" id="navDate"></span>
+      </div>
+      <div class="nav-links">
+        <a href="marketting.html">Marketting</a>
+        <a class="active" href="orders.html">Orders</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="wrap">
+    <div class="container">
+      <header>
+        <div class="topbar">
+          <div class="brand-left">
+            <div class="logo-ring">
+              <img class="logo-img" src="logo.png" alt="Your Spiced logo" />
+            </div>
+            <div>
+              <h1>Your Spiced — Orders</h1>
+              <p class="tagline">Live orders with recordings and searchable history.</p>
+            </div>
+          </div>
+
+          <!-- Add Logout button here -->
+          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+            <button class="themeBtn" id="themeToggle" title="Toggle theme">
+              <span class="themeIcon" aria-hidden="true"></span>
+              <span id="themeLabel">Dark</span>
+            </button>
+
+            <button class="btn ghost" id="logoutBtn" type="button" title="Logout">
+              Logout
+            </button>
+
+            <span class="badge" id="headerPill">Initializing…</span>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <div id="errBox" class="error"></div>
+
+        <div class="toolbar">
+          <div class="left">
+            <div class="badge2">
+              <span id="dot" class="dot"></span>
+              <span id="statusText">Starting…</span>
+            </div>
+            <div class="meta">
+              <div><strong>Last update:</strong> <span id="time">—</span></div>
+              <div class="muted" id="resultMeta">0 rows</div>
+            </div>
+          </div>
+
+          <div class="controls">
+            <div class="field">
+              <label for="sortSel">Sort</label>
+              <select id="sortSel">
+                <option value="desc" selected>Newest</option>
+                <option value="asc">Oldest</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="typeSel">Type</label>
+              <select id="typeSel">
+                <option value="all" selected>All</option>
+                <option value="pickup">Pickup</option>
+                <option value="delivery">Delivery</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="dateSel">Date</label>
+              <select id="dateSel">
+                <option value="all" selected>All</option>
+                <option value="today">Today</option>
+                <option value="last7">Last 7 days</option>
+                <option value="last30">Last month</option>
+                <option value="last365">Last year</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="minTotal">Min Total</label>
+              <input id="minTotal" type="number" step="0.01" min="0" placeholder="e.g. 50" />
+            </div>
+
+            <div class="field">
+              <label for="minOrders">Min Orders</label>
+              <input id="minOrders" type="number" step="1" min="0" placeholder="e.g. 3" />
+            </div>
+
+            <div class="search">
+              <span>Search</span>
+              <input id="searchInput" placeholder="ORD… / call_… / name / phone" />
+            </div>
+
+            <button class="btn primary" id="refreshBtn">Refresh calls</button>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="tableFull">
+        <div class="card tableWrap">
+          <table id="table"></table>
+        </div>
+      </div>
+      </main>
+    </div>
+
+    <script>
+      // ✅ show today's date in navbar
+      document.getElementById("navDate").textContent = new Date().toISOString().slice(0,10);
+
+      // ✅ Logout handler (server-side session)
+      document.getElementById("logoutBtn").addEventListener("click", async () => {
+        try {
+          await fetch("/api/logout", { method: "POST" });
+        } finally {
+          window.location.href = "/login";
+        }
+      });
+
+      // ---------------------------
+      // ✅ Theme (light / dark)
+      // ---------------------------
+      const THEME_KEY = "ops_theme";
+      function applyTheme(theme) {
+        const t = (theme === "light") ? "light" : "dark";
+        document.documentElement.setAttribute("data-theme", t);
+        localStorage.setItem(THEME_KEY, t);
+        document.getElementById("themeLabel").textContent = (t === "light") ? "Light" : "Dark";
+      }
+      (function initTheme(){
+        const saved = localStorage.getItem(THEME_KEY);
+        applyTheme(saved || "dark");
+      })();
+      document.getElementById("themeToggle").addEventListener("click", () => {
+        const current = document.documentElement.getAttribute("data-theme") || "dark";
+        applyTheme(current === "dark" ? "light" : "dark");
+      });
+
+      // ---------------------------
+      // Firebase
+      // ---------------------------
+      const firebaseConfig = {
+        databaseURL: "https://order-sheet-3578a-default-rtdb.firebaseio.com/"
+      };
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.database();
+
+      // ---------------------------
+      // Retell
+      // ---------------------------
+
+      async function fetchRetellCalls(limit = 700) {
+        const res = await fetch("/api/retell/list-calls", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ limit })
+        });
+
+        if (!res.ok) {
+          // If session expired, server returns 401; redirect to login
+          if (res.status === 401) {
+            window.location.href = "/login";
+            return [];
+          }
+          const text = await res.text().catch(() => "");
+          throw new Error(`Retell proxy error: ${res.status} ${res.statusText} ${text}`);
+        }
+
+        const data = await res.json();
+        if (Array.isArray(data)) return data;
+        if (Array.isArray(data.calls)) return data.calls;
+        return [];
+      }
+
+      // ---------------------------
+      // ✅ n8n Webhook (Print Receipt)
+      // ---------------------------
+      const N8N_WEBHOOK_URL = "https://muqniturrehman07.app.n8n.cloud/webhook/735c5df7-448b-4940-986d-d22eee1a4983";
+
+      async function sendReceiptToN8n(orderObj) {
+        // user asked: "body of items payload of that row"
+        const itemsParsed = parseJsonSafe(orderObj.items_json);
+        const itemsPayload = (itemsParsed !== null) ? itemsParsed : safeText(orderObj.items_json);
+
+        // You can keep ONLY {items: ...} if you want.
+        const body = {
+          items: itemsPayload,
+          order_id: orderObj.order_id || "",
+          customer_name: orderObj.customer_name || "",
+          customer_phone: orderObj.customer_phone || "",
+          total: orderObj.totalRaw || "",
+          payment_method: orderObj.payment_method || "",
+          pickup_or_delivery: orderObj.pickup_or_delivery || "",
+          confirmed_at: orderObj.confirmed_at || "",
+          address: orderObj.address || ""
+        };
+
+        const res = await fetch(N8N_WEBHOOK_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+        });
+
+        if (!res.ok) {
+          const t = await res.text().catch(() => "");
+          throw new Error(`n8n webhook failed: ${res.status} ${res.statusText} ${t}`);
+        }
+
+        // n8n may return JSON or text; both fine
+        return res;
+      }
+
+      // ---------------------------
+      // UI helpers
+      // ---------------------------
+      function setStatus(text, mode = "idle") {
+        const dot = document.getElementById("dot");
+        const statusText = document.getElementById("statusText");
+        const pill = document.getElementById("headerPill");
+
+        statusText.textContent = text;
+        pill.textContent = text;
+
+        dot.classList.remove("live", "warn");
+        if (mode === "live") dot.classList.add("live");
+        if (mode === "warn") dot.classList.add("warn");
+      }
+
+      function showError(msg) {
+        const box = document.getElementById("errBox");
+        box.style.display = "block";
+        box.textContent = msg;
+      }
+      function clearError() {
+        const box = document.getElementById("errBox");
+        box.style.display = "none";
+        box.textContent = "";
+      }
+
+      function safeText(x) {
+        if (x === null || x === undefined) return "";
+        return String(x);
+      }
+
+      function parseJsonSafe(value) {
+        const raw = safeText(value).trim();
+        if (!raw) return null;
+        try { return JSON.parse(raw); } catch { return null; }
+      }
+
+      function fmtDuration(ms) {
+        const totalSec = Math.floor((Number(ms) || 0) / 1000);
+        const m = String(Math.floor(totalSec / 60)).padStart(2, "0");
+        const s = String(totalSec % 60).padStart(2, "0");
+        return `${m}:${s}`;
+      }
+
+      function numOrNaN(v) {
+        const n = Number(v);
+        return Number.isFinite(n) ? n : NaN;
+      }
+
+      function clampNonNegative(n) {
+        if (!Number.isFinite(n)) return NaN;
+        return Math.max(0, n);
+      }
+
+      // ✅ date helpers
+      function startOfDayMs(d = new Date()) {
+        const x = new Date(d);
+        x.setHours(0,0,0,0);
+        return x.getTime();
+      }
+      function daysAgoStartMs(days) {
+        const now = new Date();
+        return startOfDayMs(now) - (days * 24 * 60 * 60 * 1000);
+      }
+
+      // ---------------------------
+      // Items dropdown render
+      // ---------------------------
+      function renderItemsDropdown(itemsValue) {
+        const raw = safeText(itemsValue).trim();
+        if (!raw) return `<span class="muted">—</span>`;
+
+        const items = parseJsonSafe(raw);
+        if (!Array.isArray(items) || items.length === 0) {
+          return `<span class="muted">—</span>`;
+        }
+
+        const names = items.map(i => safeText(i?.name)).filter(Boolean);
+        const preview = names.slice(0, 2).join(", ");
+        const more = names.length > 2 ? ` +${names.length - 2} more` : "";
+        const count = items.length;
+
+        const rows = items.map(it => {
+          const name = safeText(it?.name) || "Item";
+          const variant = safeText(it?.variant);
+          const qty = (it?.quantity === null || it?.quantity === undefined) ? "" : String(it.quantity);
+          const each = (it?.price_per_item === null || it?.price_per_item === undefined) ? "" : String(it.price_per_item);
+          const line = (it?.line_total === null || it?.line_total === undefined) ? "" : String(it.line_total);
+
+          const metaParts = [];
+          if (variant) metaParts.push(`Variant: ${variant}`);
+          if (qty) metaParts.push(`Qty: ${qty}`);
+          if (each) metaParts.push(`Each: ${each}`);
+
+          return `
+            <div class="itemRow">
+              <div class="itemTop">
+                <div>
+                  <div class="itemName">${name}</div>
+                  <div class="itemMeta">${metaParts.length ? metaParts.join(" • ") : ""}</div>
+                </div>
+                <div class="money">${line ? line : ""}</div>
+              </div>
+            </div>
+          `;
+        }).join("");
+
+        return `
+          <details class="itemsDetails">
+            <summary>
+              <div>
+                Items (${count})
+                <div class="itemsHint">${preview || "—"}${more}</div>
+              </div>
+              <span class="muted" style="font-weight:700;">View</span>
+            </summary>
+            <div class="itemsList">${rows}</div>
+          </details>
+        `;
+      }
+
+      function renderAddressHTML(addrValue) {
+        const raw = safeText(addrValue).trim();
+        if (!raw) return `<span class="muted">—</span>`;
+
+        const obj = parseJsonSafe(raw);
+        if (!obj || typeof obj !== "object") {
+          return `<div class="addressBox">${raw}</div>`;
+        }
+
+        const parts = [];
+        if (obj.address_line) parts.push(obj.address_line);
+        if (obj.street) parts.push(obj.street);
+        if (obj.city) parts.push(obj.city);
+        if (obj.postcode) parts.push(obj.postcode);
+
+        const text = parts.filter(Boolean).join(", ");
+        return `<div class="addressBox">${text || raw}</div>`;
+      }
+
+      // ---------------------------
+      // Data state
+      // ---------------------------
+      let CALL_MAP = new Map();
+
+      let ORDERS = [];
+      let FILTER_SEARCH = "";
+      let FILTER_TYPE = "all";
+      let FILTER_SORT = "desc";
+      let FILTER_DATE = "all";
+      let FILTER_MIN_TOTAL = NaN;
+      let FILTER_MIN_ORDERS = NaN;
+
+      function buildCallMap(retellCalls) {
+        const map = new Map();
+        retellCalls.forEach(c => {
+          if (!c || !c.call_id) return;
+          map.set(c.call_id, {
+            recording_url: c.recording_url || "",
+            call_status: c.call_status || "",
+            duration_ms: c.duration_ms || 0
+          });
+        });
+        return map;
+      }
+
+      async function refreshRetellMap() {
+        setStatus("Loading Retell calls…", "idle");
+        const calls = await fetchRetellCalls(700);
+        CALL_MAP = buildCallMap(calls);
+        setStatus("Live", "live");
+      }
+
+      function normalizeSheet(rows) {
+        if (!Array.isArray(rows) || rows.length < 2) return [];
+
+        const header = rows[0].map(h => safeText(h).trim().toLowerCase());
+        const idx = {};
+        header.forEach((h,i) => idx[h] = i);
+
+        const get = (row, key) => {
+          const i = idx[key];
+          if (i === undefined || i < 0 || i >= row.length) return "";
+          return row[i];
+        };
+
+        const base = [];
+        for (let r = 1; r < rows.length; r++) {
+          const row = rows[r] || [];
+
+          const order_id = safeText(get(row, "order_id")).trim();
+          const payment_method = safeText(get(row, "payment_method")).trim();
+
+          const call_id = safeText(get(row, "call_id")).trim();
+          const confirmed_at = safeText(get(row, "confirmed_at")).trim();
+          const customer_name = safeText(get(row, "customer_name")).trim();
+          const customer_phone = safeText(get(row, "customer_phone")).trim();
+          const pickup_or_delivery = safeText(get(row, "pickup_or_delivery")).trim().toLowerCase();
+          const items_json = safeText(get(row, "items_json")).trim();
+          const address = safeText(get(row, "address")).trim();
+
+          const totalRaw = safeText(get(row, "total")).trim() || safeText(get(row, "subtotal")).trim();
+          const totalNum = numOrNaN(totalRaw);
+
+          const confirmedAtMs = confirmed_at ? Date.parse(confirmed_at) : NaN;
+          const customerKey = (customer_phone || customer_name || "unknown").toLowerCase();
+
+          base.push({
+            rawRow: row,
+            obj: {
+              order_id,
+              payment_method,
+              call_id,
+              confirmed_at,
+              customer_name,
+              customer_phone,
+              pickup_or_delivery,
+              items_json,
+              address,
+              totalRaw
+            },
+            confirmedAtMs,
+            type: pickup_or_delivery || "",
+            totalNum,
+            customerKey
+          });
+        }
+
+        const counts = new Map();
+        base.forEach(o => counts.set(o.customerKey, (counts.get(o.customerKey) || 0) + 1));
+        base.forEach(o => o.orderCountForCustomer = counts.get(o.customerKey) || 1);
+
+        return base;
+      }
+
+      function applyFiltersAndSort(list) {
+        let out = list.slice();
+
+        if (FILTER_SEARCH) {
+          const q = FILTER_SEARCH;
+          out = out.filter(o => {
+            const hay = [
+              o.obj.order_id,
+              o.obj.payment_method,
+              o.obj.call_id,
+              o.obj.customer_name,
+              o.obj.customer_phone,
+              o.obj.confirmed_at
+            ].join(" | ").toLowerCase();
+            return hay.includes(q);
+          });
+        }
+
+        if (FILTER_TYPE !== "all") {
+          out = out.filter(o => (o.type || "").toLowerCase() === FILTER_TYPE);
+        }
+
+        if (FILTER_DATE !== "all") {
+          const todayStart = startOfDayMs(new Date());
+          let minMs = -Infinity;
+
+          if (FILTER_DATE === "today") minMs = todayStart;
+          if (FILTER_DATE === "last7") minMs = daysAgoStartMs(7);
+          if (FILTER_DATE === "last30") minMs = daysAgoStartMs(30);
+          if (FILTER_DATE === "last365") minMs = daysAgoStartMs(365);
+
+          out = out.filter(o => Number.isFinite(o.confirmedAtMs) && o.confirmedAtMs >= minMs);
+        }
+
+        if (Number.isFinite(FILTER_MIN_TOTAL)) {
+          out = out.filter(o => Number.isFinite(o.totalNum) && o.totalNum >= FILTER_MIN_TOTAL);
+        }
+
+        if (Number.isFinite(FILTER_MIN_ORDERS)) {
+          out = out.filter(o => (o.orderCountForCustomer || 0) >= FILTER_MIN_ORDERS);
+        }
+
+        out.sort((a, b) => {
+          const aa = Number.isFinite(a.confirmedAtMs) ? a.confirmedAtMs : -Infinity;
+          const bb = Number.isFinite(b.confirmedAtMs) ? b.confirmedAtMs : -Infinity;
+          return (FILTER_SORT === "asc") ? (aa - bb) : (bb - aa);
+        });
+
+        return out;
+      }
+
+      function calcTotals(list) {
+        let totalSales = 0;
+        let pickupCount = 0;
+        let deliveryCount = 0;
+
+        list.forEach(o => {
+          if ((o.type || "").toLowerCase() === "pickup") pickupCount++;
+          if ((o.type || "").toLowerCase() === "delivery") deliveryCount++;
+          if (Number.isFinite(o.totalNum)) totalSales += o.totalNum;
+        });
+
+        return { rows: list.length, pickupCount, deliveryCount, totalSales };
+      }
+
+      // ---------------------------
+      // Render
+      // ---------------------------
+      function renderTable(data, updatedAt) {
+        const table = document.getElementById("table");
+        table.innerHTML = "";
+
+        const columns = [
+          { key: "order_id", label: "Order ID", cls: "col-orderid" },
+          { key: "call_id", label: "Call ID", cls: "col-call" },
+          { key: "confirmed_at", label: "Confirmed At", cls: "col-time" },
+          { key: "customer_name", label: "Customer", cls: "col-customer" },
+          { key: "customer_phone", label: "Phone", cls: "col-phone" },
+          { key: "pickup_or_delivery", label: "Type", cls: "col-type" },
+          { key: "payment_method", label: "Payment", cls: "col-payment" },
+          { key: "total", label: "Total", cls: "col-total" },
+          { key: "items_json", label: "Items", cls: "col-items" },
+          { key: "address", label: "Address", cls: "col-address" },
+          { key: "__print__", label: "Print Receipt", cls: "col-print" },   // ✅ NEW
+          { key: "__recording__", label: "Recording", cls: "col-recording" }
+        ];
+
+        // THEAD
+        const thead = document.createElement("thead");
+        const trh = document.createElement("tr");
+        columns.forEach(col => {
+          const th = document.createElement("th");
+          th.textContent = col.label;
+          th.className = col.cls || "";
+          trh.appendChild(th);
+        });
+        thead.appendChild(trh);
+        table.appendChild(thead);
+
+        const tbody = document.createElement("tbody");
+
+        data.forEach((o, rowIndex) => {
+          const tr = document.createElement("tr");
+          const v = o.obj;
+
+          columns.forEach(col => {
+            const td = document.createElement("td");
+            td.className = col.cls || "";
+
+            if (col.key === "__recording__") {
+              td.className = "recordingCell " + (col.cls || "");
+              const callId = safeText(v.call_id).trim();
+              const callInfo = callId ? CALL_MAP.get(callId) : null;
+              const recUrl = callInfo?.recording_url || "";
+
+              if (callId && recUrl) {
+                td.innerHTML = `
+                  <div class="recMeta">Status: ${callInfo.call_status || "unknown"} • Duration: ${fmtDuration(callInfo.duration_ms)}</div>
+                  <audio controls preload="none" src="${recUrl}"></audio>
+                `;
+              } else if (callId && !recUrl) {
+                td.innerHTML = `<div class="muted">Call exists but recording_url missing.</div><div class="callid" style="margin-top:6px;">${callId}</div>`;
+              } else {
+                td.innerHTML = `<span class="muted">No recording</span>`;
+              }
+
+              tr.appendChild(td);
+              return;
+            }
+
+            // ✅ Print Receipt button
+            if (col.key === "__print__") {
+              const btnId = `printBtn_${rowIndex}`;
+              const statusId = `printStatus_${rowIndex}`;
+              td.innerHTML = `
+                <button class="btn primary" id="${btnId}" style="width: 150px; justify-content:center;">
+                  Print
+                </button>
+                <div class="miniStatus" id="${statusId}">—</div>
+              `;
+
+              // attach click after element is in DOM
+              setTimeout(() => {
+                const btn = document.getElementById(btnId);
+                const st = document.getElementById(statusId);
+                if (!btn || !st) return;
+
+                btn.addEventListener("click", async () => {
+                  clearError();
+                  btn.disabled = true;
+                  btn.style.filter = "grayscale(.2) brightness(.95)";
+                  st.textContent = "Sending…";
+
+                  try {
+                    await sendReceiptToN8n(v);
+                    st.textContent = "✅ Sent";
+                  } catch (e) {
+                    st.textContent = "❌ Failed";
+                    showError(String(e.message || e));
+                  } finally {
+                    btn.disabled = false;
+                    btn.style.filter = "";
+                  }
+                }, { once: true });
+              }, 0);
+
+              tr.appendChild(td);
+              return;
+            }
+
+            if (col.key === "order_id") {
+              td.innerHTML = `<span class="pill">${safeText(v.order_id) || "—"}</span>`;
+              tr.appendChild(td);
+              return;
+            }
+
+            if (col.key === "payment_method") {
+              td.innerHTML = `<span class="pill">${safeText(v.payment_method) || "—"}</span>`;
+              tr.appendChild(td);
+              return;
+            }
+
+            if (col.key === "call_id") {
+              td.innerHTML = `<span class="callid">${safeText(v.call_id) || "—"}</span>`;
+              tr.appendChild(td);
+              return;
+            }
+
+            if (col.key === "confirmed_at") {
+              td.textContent = v.confirmed_at ? new Date(v.confirmed_at).toLocaleString() : "—";
+              tr.appendChild(td);
+              return;
+            }
+
+            if (col.key === "pickup_or_delivery") {
+              td.innerHTML = `<span class="chip">${(v.pickup_or_delivery || "—")}</span>`;
+              tr.appendChild(td);
+              return;
+            }
+
+            if (col.key === "total") {
+              const show = Number.isFinite(o.totalNum) ? o.totalNum : (safeText(v.totalRaw).trim() ? v.totalRaw : "—");
+              td.innerHTML = `<span class="money">${show}</span>`;
+              tr.appendChild(td);
+              return;
+            }
+
+            if (col.key === "items_json") {
+              td.innerHTML = renderItemsDropdown(v.items_json);
+              tr.appendChild(td);
+              return;
+            }
+
+            if (col.key === "address") {
+              td.innerHTML = renderAddressHTML(v.address);
+              tr.appendChild(td);
+              return;
+            }
+
+            td.textContent = safeText(v[col.key]) || "—";
+            tr.appendChild(td);
+          });
+
+          tbody.appendChild(tr);
+        });
+
+        table.appendChild(tbody);
+
+        // TFOOT summary row
+        const t = calcTotals(data);
+        const tfoot = document.createElement("tfoot");
+        const trf = document.createElement("tr");
+
+        columns.forEach((col, i) => {
+          const td = document.createElement("td");
+          td.className = col.cls || "";
+
+          if (i === 0) {
+            td.textContent = "TOTAL";
+          } else if (col.key === "confirmed_at") {
+            td.textContent = `${t.rows} orders`;
+          } else if (col.key === "pickup_or_delivery") {
+            td.textContent = `P:${t.pickupCount} • D:${t.deliveryCount}`;
+          } else if (col.key === "total") {
+            td.innerHTML = `<span class="money">${t.totalSales.toFixed(2)}</span>`;
+          } else {
+            td.textContent = "";
+          }
+
+          trf.appendChild(td);
+        });
+
+        tfoot.appendChild(trf);
+        table.appendChild(tfoot);
+
+        if (updatedAt) document.getElementById("time").textContent = new Date(updatedAt).toLocaleString();
+        document.getElementById("resultMeta").textContent = `${data.length} rows`;
+      }
+
+      function rerender() {
+        const filtered = applyFiltersAndSort(ORDERS);
+        renderTable(filtered, LAST_UPDATED_AT);
+      }
+
+      // ---------------------------
+      // Controls
+      // ---------------------------
+      const searchInput = document.getElementById("searchInput");
+      const typeSel = document.getElementById("typeSel");
+      const sortSel = document.getElementById("sortSel");
+      const dateSel = document.getElementById("dateSel");
+      const minTotal = document.getElementById("minTotal");
+      const minOrders = document.getElementById("minOrders");
+
+      searchInput.addEventListener("input", (e) => {
+        FILTER_SEARCH = safeText(e.target.value).trim().toLowerCase();
+        rerender();
+      });
+
+      typeSel.addEventListener("change", (e) => {
+        FILTER_TYPE = safeText(e.target.value);
+        rerender();
+      });
+
+      sortSel.addEventListener("change", (e) => {
+        FILTER_SORT = safeText(e.target.value);
+        rerender();
+      });
+
+      dateSel.addEventListener("change", (e) => {
+        FILTER_DATE = safeText(e.target.value);
+        rerender();
+      });
+
+      // no negative
+      minTotal.addEventListener("input", (e) => {
+        const raw = safeText(e.target.value).trim();
+        const n = raw === "" ? NaN : Number(raw);
+        FILTER_MIN_TOTAL = clampNonNegative(n);
+        if (raw !== "" && Number.isFinite(n) && n < 0) e.target.value = "0";
+        rerender();
+      });
+
+      // no negative
+      minOrders.addEventListener("input", (e) => {
+        const raw = safeText(e.target.value).trim();
+        const n = raw === "" ? NaN : Math.floor(Number(raw));
+        FILTER_MIN_ORDERS = clampNonNegative(n);
+        if (raw !== "" && Number.isFinite(n) && n < 0) e.target.value = "0";
+        rerender();
+      });
+
+      document.getElementById("refreshBtn").addEventListener("click", async () => {
+        clearError();
+        try {
+          await refreshRetellMap();
+          rerender();
+        } catch (e) {
+          setStatus("Live (Retell failed)", "warn");
+          showError(String(e.message || e));
+        }
+      });
+
+      // ---------------------------
+      // Boot
+      // ---------------------------
+      let LAST_UPDATED_AT = null;
+
+      (async () => {
+        clearError();
+        try {
+          await refreshRetellMap();
+        } catch (e) {
+          setStatus("Retell error", "warn");
+          showError(String(e.message || e));
+        }
+      })();
+
+      db.ref("liveSheet").on("value", async (snap) => {
+        const data = snap.val();
+        if (!data) return;
+
+        LAST_UPDATED_AT = data.updatedAt || null;
+        ORDERS = normalizeSheet(data.rows || []);
+
+        try {
+          await refreshRetellMap();
+        } catch (e) {
+          setStatus("Live (Retell failed)", "warn");
+          showError(String(e.message || e));
+        }
+
+        rerender();
+      });
+    </script>
+</body>
+</html>
